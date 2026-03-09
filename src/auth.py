@@ -157,9 +157,7 @@ class GoogleAdsAuthManager:
             }
             
             # Add customer IDs
-            if customer_id:
-                client_config["login_customer_id"] = customer_id.replace("-", "")
-            elif login_customer_id := self.config.get("login_customer_id"):
+            if login_customer_id := self.config.get("login_customer_id"):
                 client_config["login_customer_id"] = login_customer_id.replace("-", "")
                 
             if linked_customer_id := self.config.get("linked_customer_id"):
