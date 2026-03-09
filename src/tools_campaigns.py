@@ -333,7 +333,7 @@ class CampaignTools:
                 conditions.append(f"campaign.advertising_channel_type = '{campaign_type.upper()}'")
                 
             if conditions:
-                query += " AND " + " AND ".join(conditions)
+                query += " WHERE " + " AND ".join(conditions)
                 
             query += " ORDER BY campaign.name"
             
@@ -344,12 +344,13 @@ class CampaignTools:
             
             campaigns = []
             for row in response:
-                # Convert all protobuf/enum values to strings explicitly
+                status = row.campaign.status
+                channel_type = row.campaign.advertising_channel_type
                 campaigns.append({
                     "id": str(row.campaign.id),
                     "name": str(row.campaign.name),
-                    "status": str(row.campaign.status.name),
-                    "type": str(row.campaign.advertising_channel_type.name),
+                    "status": status.name if hasattr(status, "name") else str(status),
+                    "type": channel_type.name if hasattr(channel_type, "name") else str(channel_type),
                 })
                 
             return {
