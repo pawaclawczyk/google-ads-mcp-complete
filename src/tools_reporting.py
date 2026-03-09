@@ -35,7 +35,7 @@ class ReportingTools:
             if not metrics:
                 metrics = [
                     "clicks", "impressions", "cost_micros", "conversions",
-                    "ctr", "average_cpc", "conversion_rate", "cost_per_conversion"
+                    "ctr", "average_cpc", "cost_per_conversion"
                 ]
                 
             # Build metrics selection
@@ -80,13 +80,18 @@ class ReportingTools:
                     if metric.endswith("_micros"):
                         campaign_data["metrics"][metric.replace("_micros", "")] = micros_to_currency(value)
                         total_metrics[metric] += value
-                    elif metric in ["ctr", "conversion_rate"]:
+                    elif metric in ["ctr"]:
                         campaign_data["metrics"][metric] = f"{value:.2%}"
                         total_metrics[metric] += value
                     else:
                         campaign_data["metrics"][metric] = value
                         total_metrics[metric] += value
                         
+                # Calculate conversion_rate from conversions/clicks
+                clicks = campaign_data["metrics"].get("clicks", 0)
+                conversions = campaign_data["metrics"].get("conversions", 0)
+                campaign_data["metrics"]["conversion_rate"] = f"{(conversions / clicks * 100):.2f}%" if clicks > 0 else "0.00%"
+
                 campaigns.append(campaign_data)
                 
             # Format totals
@@ -94,7 +99,7 @@ class ReportingTools:
             for metric, value in total_metrics.items():
                 if metric.endswith("_micros"):
                     formatted_totals[metric.replace("_micros", "")] = micros_to_currency(value)
-                elif metric in ["ctr", "conversion_rate"]:
+                elif metric in ["ctr"]:
                     # Calculate weighted average for rates
                     if len(campaigns) > 0:
                         formatted_totals[metric] = f"{value/len(campaigns):.2%}"
