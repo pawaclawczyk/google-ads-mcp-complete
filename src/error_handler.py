@@ -244,7 +244,7 @@ class RetryableGoogleAdsClient:
         
         # If it's a service getter, wrap the service
         if name == "get_service":
-            def wrapped_get_service(service_name: str, version: str = "v20") -> Any:
+            def wrapped_get_service(service_name: str, version: str = "v21") -> Any:
                 service = attr(service_name, version)
                 return RetryableService(service, self._error_handler)
             return wrapped_get_service
