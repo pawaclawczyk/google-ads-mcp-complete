@@ -256,3 +256,84 @@ class BudgetTools:
                 "error": str(e),
                 "error_type": "UnexpectedError"
             }
+
+    async def remove_budget(
+        self,
+        customer_id: str,
+        budget_id: str,
+    ) -> Dict[str, Any]:
+        """Remove a campaign budget. Fails if the budget is still referenced by any campaign."""
+        try:
+            client = self.auth_manager.get_client(customer_id)
+            googleads_service = client.get_service("GoogleAdsService")
+
+            # Pre-flight: check reference_count
+            query = f"""
+                SELECT campaign_budget.reference_count
+                FROM campaign_budget
+                WHERE campaign_budget.id = {budget_id}
+            """
+            response = googleads_service.search(customer_id=customer_id, query=query)
+            rows = list(response)
+            if not rows:
+                return {
+                    "success": False,
+                    "error": f"Budget {budget_id} not found",
+                    "error_type": "NotFound",
+                }
+            reference_count = rows[0].campaign_budget.reference_count
+            if reference_count > 0:
+                return {
+                    "success": False,
+                    "error": (
+                        f"Budget {budget_id} is still referenced by {reference_count} "
+                        "campaign(s). Unlink or remove those campaigns first."
+                    ),
+                    "error_type": "ValidationError",
+                    "reference_count": reference_count,
+                }
+
+            # Remove the budget
+            budget_service = client.get_service("CampaignBudgetService")
+            budget_operation = client.get_type("CampaignBudgetOperation")
+            budget_operation.remove = budget_service.campaign_budget_path(customer_id, budget_id)
+
+            remove_response = budget_service.mutate_campaign_budgets(
+                customer_id=customer_id,
+                operations=[budget_operation],
+            )
+
+            resource_name = remove_response.results[0].resource_name
+            logger.info(
+                "Removed campaign budget",
+                customer_id=customer_id,
+                budget_id=budget_id,
+            )
+            return {
+                "success": True,
+                "budget_id": budget_id,
+                "resource_name": resource_name,
+                "message": f"Budget {budget_id} removed successfully",
+            }
+
+        except GoogleAdsException as e:
+            for err in e.failure.errors:
+                if "OPERATION_NOT_PERMITTED_FOR_REMOVED_RESOURCE" in str(err.error_code):
+                    return {
+                        "success": True,
+                        "already_removed": True,
+                        "message": f"Budget {budget_id} was already removed",
+                    }
+            logger.error(f"Failed to remove budget: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "error_type": "GoogleAdsException",
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error removing budget: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "error_type": "UnexpectedError",
+            }

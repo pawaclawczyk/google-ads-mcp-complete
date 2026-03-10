@@ -486,8 +486,23 @@ class GoogleAdsTools:
                     "customer_id": {"type": "string", "required": True},
                 },
             },
+            "remove_budget": {
+                "description": (
+                    "Remove a campaign budget permanently. The budget must have no campaigns "
+                    "referencing it (reference_count = 0); if any ENABLED or PAUSED campaigns "
+                    "still use the budget the call returns a ValidationError with the reference "
+                    "count. Non-shared budgets attached to a campaign are automatically removed "
+                    "when that campaign is deleted — use this tool only for budgets that are "
+                    "already unlinked."
+                ),
+                "handler": self.budget_tools.remove_budget,
+                "parameters": {
+                    "customer_id": {"type": "string", "required": True},
+                    "budget_id": {"type": "string", "required": True, "description": "Numeric budget ID to remove"},
+                },
+            },
         }
-        
+
     def _register_keyword_tools(self) -> Dict[str, Dict[str, Any]]:
         """Register keyword management tools."""
         return {
