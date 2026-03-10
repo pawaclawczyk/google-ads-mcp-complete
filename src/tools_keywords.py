@@ -10,6 +10,9 @@ from .utils import micros_to_currency
 
 logger = structlog.get_logger(__name__)
 
+_KEYWORD_MATCH_TYPE = {0: "UNSPECIFIED", 1: "UNKNOWN", 2: "BROAD", 3: "PHRASE", 4: "EXACT"}
+_CRITERION_STATUS   = {0: "UNSPECIFIED", 1: "UNKNOWN", 2: "ENABLED", 3: "PAUSED", 4: "REMOVED"}
+
 
 class KeywordTools:
     """Keyword management tools."""
@@ -275,7 +278,7 @@ class KeywordTools:
                     metrics.impressions,
                     metrics.cost_micros,
                     metrics.conversions
-                FROM ad_group_criterion
+                FROM keyword_view
                 WHERE ad_group_criterion.type = KEYWORD
             """
             
@@ -297,11 +300,13 @@ class KeywordTools:
             
             keywords = []
             for row in response:
+                _mt = row.ad_group_criterion.keyword.match_type
+                _st = row.ad_group_criterion.status
                 keyword_data = {
                     "keyword_id": str(row.ad_group_criterion.criterion_id),
                     "text": str(row.ad_group_criterion.keyword.text),
-                    "match_type": str(row.ad_group_criterion.keyword.match_type.name),
-                    "status": str(row.ad_group_criterion.status.name),
+                    "match_type": _mt.name if hasattr(_mt, "name") else _KEYWORD_MATCH_TYPE.get(int(_mt), str(_mt)),
+                    "status": _st.name if hasattr(_st, "name") else _CRITERION_STATUS.get(int(_st), str(_st)),
                     "negative": row.ad_group_criterion.negative,
                     "cpc_bid": micros_to_currency(row.ad_group_criterion.cpc_bid_micros),
                     "ad_group_id": str(row.ad_group.id),
@@ -560,11 +565,13 @@ class KeywordTools:
             
             keywords = []
             for row in response:
+                _mt = row.ad_group_criterion.keyword.match_type
+                _st = row.ad_group_criterion.status
                 keyword_data = {
                     "keyword_id": str(row.ad_group_criterion.criterion_id),
                     "text": str(row.ad_group_criterion.keyword.text),
-                    "match_type": str(row.ad_group_criterion.keyword.match_type.name),
-                    "status": str(row.ad_group_criterion.status.name),
+                    "match_type": _mt.name if hasattr(_mt, "name") else _KEYWORD_MATCH_TYPE.get(int(_mt), str(_mt)),
+                    "status": _st.name if hasattr(_st, "name") else _CRITERION_STATUS.get(int(_st), str(_st)),
                     "cpc_bid": micros_to_currency(row.ad_group_criterion.cpc_bid_micros),
                     "ad_group_name": str(row.ad_group.name),
                     "ad_group_id": str(row.ad_group.id),
