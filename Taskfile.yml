@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+vars:
+  GREETING: Hello, world!
+
+tasks:
+  default:
+    desc: Print a greeting message
+    cmds:
+      - echo "{{.GREETING}}"
+    silent: true
+
+  format:
+    desc: Format the code
+    cmds:
+      - uv run ruff format src/tools_budgets.py
+
+  lint-fix:
+    desc: Lint the code
+    cmds:
+      - uv run ruff check --fix src/tools_budgets.py
+
+  type-check:
+    desc: Type check the code
+    cmds:
+      - uv run mypy src/tools_budgets.py
+
+  check:
+    desc: Run all checks
+    cmds:
+      - task: format
+      - task: lint-fix
+      - task: type-check

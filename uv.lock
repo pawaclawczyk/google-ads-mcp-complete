@@ -424,6 +424,7 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "cachetools" },
     { name = "google-ads" },
+    { name = "google-ads-stubs" },
     { name = "httpx" },
     { name = "lxml" },
     { name = "mcp" },
@@ -431,6 +432,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "structlog" },
     { name = "tenacity" },
+    { name = "types-protobuf" },
 ]
 
 [package.optional-dependencies]
@@ -442,6 +444,12 @@ dev = [
     { name = "ruff" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "aiofiles", specifier = ">=24.0.0" },
@@ -449,6 +457,7 @@ requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=24.0.0" },
     { name = "cachetools", specifier = ">=5.0.0" },
     { name = "google-ads", specifier = ">=24.1.0" },
+    { name = "google-ads-stubs", specifier = ">=25.1.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "lxml", specifier = ">=5.0.0" },
     { name = "mcp", specifier = ">=1.0.0" },
@@ -460,8 +469,33 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.0" },
     { name = "structlog", specifier = ">=24.0.0" },
     { name = "tenacity", specifier = ">=8.0.0" },
+    { name = "types-protobuf", specifier = ">=6.32.1.20260221" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.19.1" },
+    { name = "ruff", specifier = ">=0.15.5" },
+]
+
+[[package]]
+name = "google-ads-stubs"
+version = "25.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-ads" },
+    { name = "google-auth-stubs" },
+    { name = "googleapis-common-protos-stubs" },
+    { name = "grpc-stubs" },
+    { name = "proto-plus-stubs" },
+    { name = "types-protobuf" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bb/b4/ec452b30ed14eb5727f98f70e9ab7506c8164d787f41b7adef1ec3c9e14d/google_ads_stubs-25.1.0.tar.gz", hash = "sha256:86c5161873fb3b47027eebf35e5511c98efdc8f3228db2d83823f8f6bd8671ed", size = 1387473, upload-time = "2026-02-14T12:25:19.359Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/35/4e/f04cd73d56bc1bb66779cf18ba265808af4756d15461baab4d2ee8fb63f8/google_ads_stubs-25.1.0-py3-none-any.whl", hash = "sha256:a21981a73dfc7e3318abb3cd3ca822294ff1ab00147ac819f07455e94aed2fc3", size = 5868576, upload-time = "2026-02-14T12:25:21.543Z" },
+]
 
 [[package]]
 name = "google-api-core"
@@ -507,6 +541,20 @@ wheels = [
 ]
 
 [[package]]
+name = "google-auth-stubs"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-auth" },
+    { name = "grpc-stubs" },
+    { name = "types-requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b3/db/bee528001d56946bee1c66aad8116e6b503fe85ec01c858c8bb6e2f68db5/google_auth_stubs-0.3.0.tar.gz", hash = "sha256:0e8834a7130c99d4338d28892df082c64c6dc3bc57abdab9a095d93e6a3d737e", size = 13259, upload-time = "2024-08-26T17:39:49.743Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e9/29/1c35456566936abd17b9f6589e9ddcfe707ded7012c6aa1b30ca42516f9d/google_auth_stubs-0.3.0-py3-none-any.whl", hash = "sha256:0afb7d537956447774d98879dd5fddd0543e0a5f1b582787adb6ce392d6fdd25", size = 29869, upload-time = "2024-08-26T17:39:48.433Z" },
+]
+
+[[package]]
 name = "googleapis-common-protos"
 version = "1.73.0"
 source = { registry = "https://pypi.org/simple" }
@@ -516,6 +564,33 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/99/96/a0205167fa0154f4a542fd6925bdc63d039d88dab3588b875078107e6f06/googleapis_common_protos-1.73.0.tar.gz", hash = "sha256:778d07cd4fbeff84c6f7c72102f0daf98fa2bfd3fa8bea426edc545588da0b5a", size = 147323, upload-time = "2026-03-06T21:53:09.727Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/69/28/23eea8acd65972bbfe295ce3666b28ac510dfcb115fac089d3edb0feb00a/googleapis_common_protos-1.73.0-py3-none-any.whl", hash = "sha256:dfdaaa2e860f242046be561e6d6cb5c5f1541ae02cfbcb034371aadb2942b4e8", size = 297578, upload-time = "2026-03-06T21:52:33.933Z" },
+]
+
+[[package]]
+name = "googleapis-common-protos-stubs"
+version = "2.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "googleapis-common-protos" },
+    { name = "grpc-stubs" },
+    { name = "types-protobuf" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f2/d3/64cb0c6121954c295b2a992dd45e7fad236f4d5cac6bdbdd48f9731b8f24/googleapis_common_protos_stubs-2.3.1.tar.gz", hash = "sha256:c3cea451c4810e3c18776e9199186cd3ec21a7e6c90d12a983c1216e185e9175", size = 104501, upload-time = "2024-01-28T16:04:22.051Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/9c/a46cda55173757fd9e4eaf219e3960ab3b799bc593fb8d23574bbc2afd0f/googleapis_common_protos_stubs-2.3.1-py3-none-any.whl", hash = "sha256:ce9a162829d8fe2c80461996f8f1cbef0ee50427501346416f9fc04ec226e9e1", size = 162766, upload-time = "2024-01-28T16:04:20.646Z" },
+]
+
+[[package]]
+name = "grpc-stubs"
+version = "1.53.0.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "grpcio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/16/8d/718393d12346c6ab842a1ad2b1a761c175e919ddce4a28c5dc63e4a5538c/grpc_stubs-1.53.0.6.tar.gz", hash = "sha256:70a0840747bd73c2c82fe819699bbf4fcf6d59bd0ed27a4713a240e0c697e1ff", size = 12954, upload-time = "2025-04-28T11:12:55.407Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/c6/c64257331aa4b7a049bd70124d97278071e78b5d5de09df6a5eae4610bbe/grpc_stubs-1.53.0.6-py3-none-any.whl", hash = "sha256:3ffc5a6b5bd84ac46f3d84e2434e97936c1262b47b71b462bdedc43caaf227e1", size = 15842, upload-time = "2025-04-28T11:12:53.982Z" },
 ]
 
 [[package]]
@@ -1028,6 +1103,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3a/02/8832cde80e7380c600fbf55090b6ab7b62bd6825dbedde6d6657c15a1f8e/proto_plus-1.27.1.tar.gz", hash = "sha256:912a7460446625b792f6448bade9e55cd4e41e6ac10e27009ef71a7f317fa147", size = 56929, upload-time = "2026-02-02T17:34:49.035Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5d/79/ac273cbbf744691821a9cca88957257f41afe271637794975ca090b9588b/proto_plus-1.27.1-py3-none-any.whl", hash = "sha256:e4643061f3a4d0de092d62aa4ad09fa4756b2cbb89d4627f3985018216f9fefc", size = 50480, upload-time = "2026-02-02T17:34:47.339Z" },
+]
+
+[[package]]
+name = "proto-plus-stubs"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "proto-plus" },
+    { name = "types-protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b9/d1/7c8a5d89a60ada46c095378012d6106dde51cd2ac68865cfe1575eb181e7/proto_plus_stubs-0.7.0.tar.gz", hash = "sha256:b3af6131b59a447d3158e6bedd4ec1fe7aa326cfd56e8b89f6c98b7c9a875a24", size = 9865, upload-time = "2024-01-27T21:01:50.643Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/95/55/03e9b3d779aa491a2a2e75e5c1795d69739a8d847a44f6ba3ae6164128c7/proto_plus_stubs-0.7.0-py3-none-any.whl", hash = "sha256:57c4e092c73126b4fe552d15cf02a2ba6bed25dba8f7a7b2b217abf179219f2d", size = 14669, upload-time = "2024-01-27T21:01:49.104Z" },
 ]
 
 [[package]]
@@ -1729,6 +1817,27 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/de/69/9aa0c6a505c2f80e519b43764f8b4ba93b5a0bbd2d9a9de6e2b24271b9a5/tomli-2.4.0-cp314-cp314t-win_amd64.whl", hash = "sha256:2add28aacc7425117ff6364fe9e06a183bb0251b03f986df0e78e974047571fd", size = 120504, upload-time = "2026-01-11T11:22:35.764Z" },
     { url = "https://files.pythonhosted.org/packages/b3/9f/f1668c281c58cfae01482f7114a4b88d345e4c140386241a1a24dcc9e7bc/tomli-2.4.0-cp314-cp314t-win_arm64.whl", hash = "sha256:2b1e3b80e1d5e52e40e9b924ec43d81570f0e7d09d11081b797bc4692765a3d4", size = 99561, upload-time = "2026-01-11T11:22:36.624Z" },
     { url = "https://files.pythonhosted.org/packages/23/d1/136eb2cb77520a31e1f64cbae9d33ec6df0d78bdf4160398e86eec8a8754/tomli-2.4.0-py3-none-any.whl", hash = "sha256:1f776e7d669ebceb01dee46484485f43a4048746235e683bcdffacdf1fb4785a", size = 14477, upload-time = "2026-01-11T11:22:37.446Z" },
+]
+
+[[package]]
+name = "types-protobuf"
+version = "6.32.1.20260221"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5f/e2/9aa4a3b2469508bd7b4e2ae11cbedaf419222a09a1b94daffcd5efca4023/types_protobuf-6.32.1.20260221.tar.gz", hash = "sha256:6d5fb060a616bfb076cbb61b4b3c3969f5fc8bec5810f9a2f7e648ee5cbcbf6e", size = 64408, upload-time = "2026-02-21T03:55:13.916Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2e/e8/1fd38926f9cf031188fbc5a96694203ea6f24b0e34bd64a225ec6f6291ba/types_protobuf-6.32.1.20260221-py3-none-any.whl", hash = "sha256:da7cdd947975964a93c30bfbcc2c6841ee646b318d3816b033adc2c4eb6448e4", size = 77956, upload-time = "2026-02-21T03:55:12.894Z" },
+]
+
+[[package]]
+name = "types-requests"
+version = "2.32.4.20260107"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0f/f3/a0663907082280664d745929205a89d41dffb29e89a50f753af7d57d0a96/types_requests-2.32.4.20260107.tar.gz", hash = "sha256:018a11ac158f801bfa84857ddec1650750e393df8a004a8a9ae2a9bec6fcb24f", size = 23165, upload-time = "2026-01-07T03:20:54.091Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1c/12/709ea261f2bf91ef0a26a9eed20f2623227a8ed85610c1e54c5805692ecb/types_requests-2.32.4.20260107-py3-none-any.whl", hash = "sha256:b703fe72f8ce5b31ef031264fe9395cac8f46a04661a79f7ed31a80fb308730d", size = 20676, upload-time = "2026-01-07T03:20:52.929Z" },
 ]
 
 [[package]]

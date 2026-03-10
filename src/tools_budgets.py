@@ -1,23 +1,34 @@
-"""Budget management tools for Google Ads API v21."""
+from typing import Any, Dict, List, Optional, cast
 
-from typing import Any, Dict, List, Optional
 import structlog
-
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
+from google.ads.googleads.v23.resources.types.campaign_budget import CampaignBudget
+from google.ads.googleads.v23.services.services.campaign_budget_service import (
+    CampaignBudgetServiceClient,
+)
+from google.ads.googleads.v23.services.services.google_ads_service import (
+    GoogleAdsServiceClient,
+)
+from google.ads.googleads.v23.services.types.campaign_budget_service import (
+    CampaignBudgetOperation,
+    MutateCampaignBudgetsResponse,
+)
 
-from .utils import currency_to_micros, micros_to_currency
+from .auth import GoogleAdsAuthManager
+from .error_handler import ErrorHandler
+from .utils import micros_to_currency
 
 logger = structlog.get_logger(__name__)
 
 
 class BudgetTools:
     """Budget management tools."""
-    
-    def __init__(self, auth_manager, error_handler):
+
+    def __init__(self, auth_manager: GoogleAdsAuthManager, error_handler: ErrorHandler) -> None:
         self.auth_manager = auth_manager
         self.error_handler = error_handler
-        
+
     async def create_budget(
         self,
         customer_id: str,
@@ -57,12 +68,12 @@ class BudgetTools:
                 explicitly_shared = True
 
         try:
-            client = self.auth_manager.get_client(customer_id)
-            budget_service = client.get_service("CampaignBudgetService")
+            client: GoogleAdsClient = self.auth_manager.get_client(customer_id)
+            budget_service: CampaignBudgetServiceClient = client.get_service("CampaignBudgetService")
 
             # Create budget operation
-            budget_operation = client.get_type("CampaignBudgetOperation")
-            budget = budget_operation.create
+            budget_operation: CampaignBudgetOperation = client.get_type("CampaignBudgetOperation")
+            budget: CampaignBudget = budget_operation.create
 
             # Set budget properties
             budget.name = name
@@ -71,10 +82,10 @@ class BudgetTools:
             # Set period
             if period_upper == "CUSTOM_PERIOD":
                 budget.period = client.enums.BudgetPeriodEnum.CUSTOM_PERIOD
-                budget.total_amount_micros = total_amount_micros
+                budget.total_amount_micros = cast(int, total_amount_micros)
             else:
                 budget.period = client.enums.BudgetPeriodEnum.DAILY
-                budget.amount_micros = amount_micros
+                budget.amount_micros = cast(int, amount_micros)
 
             # Set delivery method
             if delivery_method.upper() == "ACCELERATED":
@@ -83,14 +94,14 @@ class BudgetTools:
                 budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
 
             # Create the budget
-            response = budget_service.mutate_campaign_budgets(
+            response: MutateCampaignBudgetsResponse = budget_service.mutate_campaign_budgets(
                 customer_id=customer_id,
                 operations=[budget_operation],
             )
 
             # Extract budget ID from response
-            budget_resource_name = response.results[0].resource_name
-            budget_id = budget_resource_name.split("/")[-1]
+            budget_resource_name: str = response.results[0].resource_name
+            budget_id: str = budget_resource_name.split("/")[-1]
 
             logger.info(
                 "Created campaign budget",
@@ -110,26 +121,18 @@ class BudgetTools:
                 "explicitly_shared": explicitly_shared,
             }
             if period_upper == "CUSTOM_PERIOD":
-                result["total_amount"] = micros_to_currency(total_amount_micros)
+                result["total_amount"] = micros_to_currency(cast(int, total_amount_micros))
             else:
-                result["amount"] = micros_to_currency(amount_micros)
+                result["amount"] = micros_to_currency(cast(int, amount_micros))
             return result
 
         except GoogleAdsException as e:
             logger.error(f"Failed to create budget: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "error_type": "GoogleAdsException"
-            }
+            return {"success": False, "error": str(e), "error_type": "GoogleAdsException"}
         except Exception as e:
             logger.error(f"Unexpected error creating budget: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "error_type": "UnexpectedError"
-            }
-    
+            return {"success": False, "error": str(e), "error_type": "UnexpectedError"}
+
     async def update_budget(
         self,
         customer_id: str,
@@ -143,31 +146,41 @@ class BudgetTools:
         """Update budget amount or settings."""
         # Validation
         if all(v is None for v in [amount_micros, total_amount_micros, name, delivery_method, explicitly_shared]):
-            return {"success": False, "error": "At least one field must be provided to update.", "error_type": "ValidationError"}
+            return {
+                "success": False,
+                "error": "At least one field must be provided to update.",
+                "error_type": "ValidationError",
+            }
 
         if amount_micros is not None and total_amount_micros is not None:
-            return {"success": False, "error": "amount_micros and total_amount_micros are mutually exclusive; provide only one.", "error_type": "ValidationError"}
+            return {
+                "success": False,
+                "error": "amount_micros and total_amount_micros are mutually exclusive; provide only one.",
+                "error_type": "ValidationError",
+            }
 
         if explicitly_shared is False:
-            return {"success": False, "error": "A shared budget can never be made non-shared. explicitly_shared cannot be set to False.", "error_type": "ValidationError"}
+            return {
+                "success": False,
+                "error": "A shared budget can never be made non-shared. explicitly_shared cannot be set to False.",
+                "error_type": "ValidationError",
+            }
 
         try:
-            client = self.auth_manager.get_client(customer_id)
-            budget_service = client.get_service("CampaignBudgetService")
+            client: GoogleAdsClient = self.auth_manager.get_client(customer_id)
+            budget_service: CampaignBudgetServiceClient = client.get_service("CampaignBudgetService")
 
             # Create budget operation
-            budget_operation = client.get_type("CampaignBudgetOperation")
-            budget = budget_operation.update
+            budget_operation: CampaignBudgetOperation = client.get_type("CampaignBudgetOperation")
+            budget: CampaignBudget = budget_operation.update
 
             # Set resource name
-            budget.resource_name = budget_service.campaign_budget_path(
-                customer_id, budget_id
-            )
+            budget.resource_name = budget_service.campaign_budget_path(customer_id, budget_id)
 
-            # Set update mask fields (API v21 compatible)
             from google.protobuf.field_mask_pb2 import FieldMask
+
             update_mask = FieldMask()
-            paths = []
+            paths: List[str] = []
 
             if amount_micros is not None:
                 budget.amount_micros = amount_micros
@@ -196,17 +209,12 @@ class BudgetTools:
             budget_operation.update_mask = update_mask
 
             # Update the budget
-            response = budget_service.mutate_campaign_budgets(
+            _response: MutateCampaignBudgetsResponse = budget_service.mutate_campaign_budgets(
                 customer_id=customer_id,
                 operations=[budget_operation],
             )
 
-            logger.info(
-                f"Updated campaign budget",
-                customer_id=customer_id,
-                budget_id=budget_id,
-                updated_fields=paths
-            )
+            logger.info("Updated campaign budget", customer_id=customer_id, budget_id=budget_id, updated_fields=paths)
 
             return {
                 "success": True,
@@ -214,33 +222,22 @@ class BudgetTools:
                 "updated_fields": paths,
                 "delivery_method": delivery_method,
                 "explicitly_shared": explicitly_shared,
-                "message": f"Successfully updated budget {budget_id}"
+                "message": f"Successfully updated budget {budget_id}",
             }
-            
+
         except GoogleAdsException as e:
             logger.error(f"Failed to update budget: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "error_type": "GoogleAdsException"
-            }
+            return {"success": False, "error": str(e), "error_type": "GoogleAdsException"}
         except Exception as e:
             logger.error(f"Unexpected error updating budget: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "error_type": "UnexpectedError"
-            }
-    
-    async def list_budgets(
-        self,
-        customer_id: str
-    ) -> Dict[str, Any]:
+            return {"success": False, "error": str(e), "error_type": "UnexpectedError"}
+
+    async def list_budgets(self, customer_id: str) -> Dict[str, Any]:
         """List all budgets."""
         try:
-            client = self.auth_manager.get_client(customer_id)
-            googleads_service = client.get_service("GoogleAdsService")
-            
+            client: GoogleAdsClient = self.auth_manager.get_client(customer_id)
+            googleads_service: GoogleAdsServiceClient = client.get_service("GoogleAdsService")
+
             query = """
                 SELECT
                     campaign_budget.id,
@@ -258,11 +255,9 @@ class BudgetTools:
                 FROM campaign_budget
             """
 
-            response = googleads_service.search(
-                customer_id=customer_id, query=query
-            )
+            response = googleads_service.search(customer_id=customer_id, query=query)
 
-            budgets = []
+            budgets: List[Dict[str, Any]] = []
             for row in response:
                 budget = row.campaign_budget
                 period = str(budget.period.name)
@@ -278,34 +273,24 @@ class BudgetTools:
                     "amount_micros": budget.amount_micros,
                     "amount": micros_to_currency(budget.amount_micros),
                     "total_amount_micros": budget.total_amount_micros,
-                    "total_amount": micros_to_currency(budget.total_amount_micros) if budget.total_amount_micros else None,
+                    "total_amount": micros_to_currency(budget.total_amount_micros)
+                    if budget.total_amount_micros
+                    else None,
                 }
                 if budget.has_recommended_budget:
                     entry["has_recommended_budget"] = True
                     entry["recommended_budget_amount_micros"] = budget.recommended_budget_amount_micros
                     entry["recommended_budget_amount"] = micros_to_currency(budget.recommended_budget_amount_micros)
                 budgets.append(entry)
-            
-            return {
-                "success": True,
-                "budgets": budgets,
-                "count": len(budgets)
-            }
-            
+
+            return {"success": True, "budgets": budgets, "count": len(budgets)}
+
         except GoogleAdsException as e:
             logger.error(f"Failed to list budgets: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "error_type": "GoogleAdsException"
-            }
+            return {"success": False, "error": str(e), "error_type": "GoogleAdsException"}
         except Exception as e:
             logger.error(f"Unexpected error listing budgets: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "error_type": "UnexpectedError"
-            }
+            return {"success": False, "error": str(e), "error_type": "UnexpectedError"}
 
     async def remove_budget(
         self,
@@ -314,8 +299,8 @@ class BudgetTools:
     ) -> Dict[str, Any]:
         """Remove a campaign budget. Fails if the budget is still referenced by any campaign."""
         try:
-            client = self.auth_manager.get_client(customer_id)
-            googleads_service = client.get_service("GoogleAdsService")
+            client: GoogleAdsClient = self.auth_manager.get_client(customer_id)
+            googleads_service: GoogleAdsServiceClient = client.get_service("GoogleAdsService")
 
             # Pre-flight: check reference_count
             query = f"""
@@ -344,16 +329,16 @@ class BudgetTools:
                 }
 
             # Remove the budget
-            budget_service = client.get_service("CampaignBudgetService")
-            budget_operation = client.get_type("CampaignBudgetOperation")
+            budget_service: CampaignBudgetServiceClient = client.get_service("CampaignBudgetService")
+            budget_operation: CampaignBudgetOperation = client.get_type("CampaignBudgetOperation")
             budget_operation.remove = budget_service.campaign_budget_path(customer_id, budget_id)
 
-            remove_response = budget_service.mutate_campaign_budgets(
+            remove_response: MutateCampaignBudgetsResponse = budget_service.mutate_campaign_budgets(
                 customer_id=customer_id,
                 operations=[budget_operation],
             )
 
-            resource_name = remove_response.results[0].resource_name
+            resource_name: str = remove_response.results[0].resource_name
             logger.info(
                 "Removed campaign budget",
                 customer_id=customer_id,
