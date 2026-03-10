@@ -426,13 +426,47 @@ class GoogleAdsTools:
         """Register budget management tools."""
         return {
             "create_budget": {
-                "description": "Create a shared campaign budget that can be assigned to one or more campaigns. delivery_method: STANDARD (default, paces spend evenly) or ACCELERATED (spends as fast as possible). amount_micros is the daily budget in micros (e.g., 10000000 = $10/day). Returns budget ID.",
+                "description": (
+                    "Create a campaign budget. Two modes are supported:\n"
+                    "• DAILY (default): average daily budget shared across campaigns. "
+                    "Requires amount_micros (e.g. 10000000 = $10/day). "
+                    "explicitly_shared defaults to True so it can be reused across campaigns.\n"
+                    "• CUSTOM_PERIOD: lifetime (campaign total) budget for campaigns with fixed "
+                    "start and end dates (Search, Shopping, and Performance Max only). "
+                    "Requires total_amount_micros. explicitly_shared is always False and cannot "
+                    "be overridden.\n"
+                    "delivery_method: STANDARD (default, paces spend evenly) or ACCELERATED."
+                ),
                 "handler": self.budget_tools.create_budget,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
                     "name": {"type": "string", "required": True},
-                    "amount_micros": {"type": "number", "required": True, "description": "Daily budget in micros ($1 = 1,000,000; e.g., 10000000 = $10/day)"},
-                    "delivery_method": {"type": "string", "default": "STANDARD", "description": "STANDARD (pace evenly throughout day) or ACCELERATED (spend as fast as possible)"},
+                    "period": {
+                        "type": "string",
+                        "default": "DAILY",
+                        "description": "DAILY (average daily budget) or CUSTOM_PERIOD (campaign total / lifetime budget).",
+                    },
+                    "amount_micros": {
+                        "type": "number",
+                        "description": "Daily budget in micros ($1 = 1,000,000). Required when period=DAILY.",
+                    },
+                    "total_amount_micros": {
+                        "type": "number",
+                        "description": "Total lifetime budget in micros. Required when period=CUSTOM_PERIOD.",
+                    },
+                    "delivery_method": {
+                        "type": "string",
+                        "default": "STANDARD",
+                        "description": "STANDARD (pace evenly throughout day) or ACCELERATED (spend as fast as possible).",
+                    },
+                    "explicitly_shared": {
+                        "type": "boolean",
+                        "description": (
+                            "Whether the budget can be shared across multiple campaigns. "
+                            "Defaults to True for DAILY budgets. "
+                            "Must be False (or omitted) for CUSTOM_PERIOD budgets."
+                        ),
+                    },
                 },
             },
             "update_budget": {

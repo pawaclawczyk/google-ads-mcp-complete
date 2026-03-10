@@ -22,55 +22,99 @@ class BudgetTools:
         self,
         customer_id: str,
         name: str,
-        amount_micros: int,
-        delivery_method: str = "STANDARD"
+        amount_micros: Optional[int] = None,
+        delivery_method: str = "STANDARD",
+        period: str = "DAILY",
+        total_amount_micros: Optional[int] = None,
+        explicitly_shared: Optional[bool] = None,
     ) -> Dict[str, Any]:
-        """Create a shared campaign budget."""
+        """Create a campaign budget (daily or campaign total)."""
+        period_upper = period.upper()
+
+        # Validate parameters per period type
+        if period_upper == "CUSTOM_PERIOD":
+            if total_amount_micros is None:
+                return {
+                    "success": False,
+                    "error": "total_amount_micros is required when period=CUSTOM_PERIOD",
+                    "error_type": "ValidationError",
+                }
+            if explicitly_shared is True:
+                return {
+                    "success": False,
+                    "error": "explicitly_shared must be False (or omitted) for CUSTOM_PERIOD budgets",
+                    "error_type": "ValidationError",
+                }
+            explicitly_shared = False
+        else:  # DAILY
+            if amount_micros is None:
+                return {
+                    "success": False,
+                    "error": "amount_micros is required when period=DAILY",
+                    "error_type": "ValidationError",
+                }
+            if explicitly_shared is None:
+                explicitly_shared = True
+
         try:
             client = self.auth_manager.get_client(customer_id)
             budget_service = client.get_service("CampaignBudgetService")
-            
+
             # Create budget operation
             budget_operation = client.get_type("CampaignBudgetOperation")
             budget = budget_operation.create
-            
+
             # Set budget properties
             budget.name = name
-            budget.amount_micros = amount_micros
-            
+            budget.explicitly_shared = explicitly_shared
+
+            # Set period
+            if period_upper == "CUSTOM_PERIOD":
+                budget.period = client.enums.BudgetPeriodEnum.CUSTOM_PERIOD
+                budget.total_amount_micros = total_amount_micros
+            else:
+                budget.period = client.enums.BudgetPeriodEnum.DAILY
+                budget.amount_micros = amount_micros
+
             # Set delivery method
             if delivery_method.upper() == "ACCELERATED":
                 budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.ACCELERATED
             else:
                 budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
-            
+
             # Create the budget
             response = budget_service.mutate_campaign_budgets(
                 customer_id=customer_id,
                 operations=[budget_operation],
             )
-            
+
             # Extract budget ID from response
             budget_resource_name = response.results[0].resource_name
             budget_id = budget_resource_name.split("/")[-1]
-            
+
             logger.info(
-                f"Created campaign budget",
+                "Created campaign budget",
                 customer_id=customer_id,
                 budget_id=budget_id,
                 name=name,
-                amount=micros_to_currency(amount_micros)
+                period=period_upper,
             )
-            
-            return {
+
+            result = {
                 "success": True,
                 "budget_id": budget_id,
                 "budget_resource_name": budget_resource_name,
                 "name": name,
-                "amount": micros_to_currency(amount_micros),
-                "delivery_method": delivery_method.upper()
+                "period": period_upper,
+                "delivery_method": delivery_method.upper(),
+                "explicitly_shared": explicitly_shared,
             }
-            
+            if period_upper == "CUSTOM_PERIOD":
+                result["total_amount"] = micros_to_currency(total_amount_micros)
+            else:
+                result["amount"] = micros_to_currency(amount_micros)
+            return result
+
         except GoogleAdsException as e:
             logger.error(f"Failed to create budget: {e}")
             return {
