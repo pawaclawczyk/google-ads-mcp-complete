@@ -488,7 +488,7 @@ class GoogleAdsTools:
                 },
             },
             "list_budgets": {
-                "description": "List all campaign budgets in the account, including budget ID, name, amount, delivery method (STANDARD/ACCELERATED), and campaign association status.",
+                "description": "List all campaign budgets in the account. Returns per budget: id, name, status, period (DAILY/CUSTOM_PERIOD), delivery_method, explicitly_shared, reference_count (number of campaigns using this budget), type, amount/amount_micros (daily budgets), total_amount/total_amount_micros (CUSTOM_PERIOD lifetime budgets), and Google budget recommendations (has_recommended_budget, recommended_budget_amount, recommended_budget_amount_micros) when available.",
                 "handler": self.budget_tools.list_budgets,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},

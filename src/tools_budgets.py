@@ -246,25 +246,45 @@ class BudgetTools:
                     campaign_budget.id,
                     campaign_budget.name,
                     campaign_budget.amount_micros,
+                    campaign_budget.total_amount_micros,
+                    campaign_budget.period,
                     campaign_budget.delivery_method,
-                    campaign_budget.status
+                    campaign_budget.status,
+                    campaign_budget.explicitly_shared,
+                    campaign_budget.reference_count,
+                    campaign_budget.has_recommended_budget,
+                    campaign_budget.recommended_budget_amount_micros,
+                    campaign_budget.type
                 FROM campaign_budget
             """
-            
+
             response = googleads_service.search(
                 customer_id=customer_id, query=query
             )
-            
+
             budgets = []
             for row in response:
-                budgets.append({
-                    "id": str(row.campaign_budget.id),
-                    "name": str(row.campaign_budget.name),
-                    "amount": micros_to_currency(row.campaign_budget.amount_micros),
-                    "amount_micros": row.campaign_budget.amount_micros,
-                    "delivery_method": str(row.campaign_budget.delivery_method.name),
-                    "status": str(row.campaign_budget.status.name)
-                })
+                budget = row.campaign_budget
+                period = str(budget.period.name)
+                entry = {
+                    "id": str(budget.id),
+                    "name": str(budget.name),
+                    "status": str(budget.status.name),
+                    "period": period,
+                    "delivery_method": str(budget.delivery_method.name),
+                    "explicitly_shared": budget.explicitly_shared,
+                    "reference_count": budget.reference_count,
+                    "type": str(budget.type_.name),
+                    "amount_micros": budget.amount_micros,
+                    "amount": micros_to_currency(budget.amount_micros),
+                    "total_amount_micros": budget.total_amount_micros,
+                    "total_amount": micros_to_currency(budget.total_amount_micros) if budget.total_amount_micros else None,
+                }
+                if budget.has_recommended_budget:
+                    entry["has_recommended_budget"] = True
+                    entry["recommended_budget_amount_micros"] = budget.recommended_budget_amount_micros
+                    entry["recommended_budget_amount"] = micros_to_currency(budget.recommended_budget_amount_micros)
+                budgets.append(entry)
             
             return {
                 "success": True,
