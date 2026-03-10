@@ -169,7 +169,7 @@ class GoogleAdsTools:
                 },
             },
             "list_campaigns": {
-                "description": "List all campaigns with optional status and campaign_type filters. Returns campaign ID, name, status, and advertising channel type.",
+                "description": "List all campaigns with optional status and campaign_type filters. Returns campaign ID, name, status, and advertising channel type. Defaults to excluding REMOVED campaigns when no status filter is provided.",
                 "handler": self.campaign_tools.list_campaigns,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
@@ -178,7 +178,7 @@ class GoogleAdsTools:
                 },
             },
             "get_campaign": {
-                "description": "Get detailed information for a single campaign including type, subtype, bidding strategy, budget (amount + delivery method), start/end dates, network settings, optimization score, and 30-day performance metrics (clicks, impressions, cost, conversions, CTR).",
+                "description": "Get detailed information for a single campaign including type, subtype, bidding strategy, budget (amount + delivery method), start/end dates, network settings, optimization score, and 30-day performance metrics (clicks, impressions, cost, conversions, CTR, average_cpc, conversion_rate).",
                 "handler": self.campaign_tools.get_campaign,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
@@ -194,7 +194,7 @@ class GoogleAdsTools:
                 },
             },
             "copy_campaign": {
-                "description": "Copy an existing campaign's settings (type, network, bidding, targeting) under a new name. Optionally override the budget amount; otherwise the source campaign's budget amount is reused. Returns the new campaign ID.",
+                "description": "Copy an existing campaign's settings (type, network, bidding, targeting) under a new name. Optionally override the budget amount; if omitted, defaults to $50.00. Returns the new campaign ID.",
                 "handler": self.campaign_tools.copy_campaign,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
@@ -227,7 +227,7 @@ class GoogleAdsTools:
         """Register ad group management tools."""
         return {
             "create_ad_group": {
-                "description": "Create a new ad group in a campaign. Default CPC bid is $2.00 (2,000,000 micros). Supported types: SEARCH_STANDARD (default), DISPLAY_STANDARD. Status is ENABLED on creation.",
+                "description": "Create a new ad group in a campaign. Default CPC bid is $2.00 (2,000,000 micros). Always creates SEARCH_STANDARD type (ad group type is not configurable via this tool). Status is ENABLED on creation.",
                 "handler": self.ad_group_tools.create_ad_group,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
@@ -237,7 +237,7 @@ class GoogleAdsTools:
                 },
             },
             "update_ad_group": {
-                "description": "Update an ad group's name, CPC bid (cpc_bid_micros), or status (ENABLED/PAUSED/REMOVED) using field-mask based update.",
+                "description": "Update an ad group's name, CPC bid (cpc_bid_micros), or status (ENABLED or PAUSED) using field-mask based update.",
                 "handler": self.ad_group_tools.update_ad_group,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
@@ -253,7 +253,6 @@ class GoogleAdsTools:
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
                     "campaign_id": {"type": "string", "description": "Optional — filter to a specific campaign; omit to list all"},
-                    "status": {"type": "string", "description": "Filter by status: ENABLED or PAUSED"},
                 },
             },
         }
@@ -556,7 +555,7 @@ class GoogleAdsTools:
                 },
             },
             "create_structured_snippet_extensions": {
-                "description": "Create structured snippet extensions for a campaign using a two-step process (asset creation + campaign association). SERVICES and FEATURES header values are mapped to SERVICE_CATALOG. Values list is padded to at least 3 items if fewer are provided. SYNTAX: structured_snippets=[{'header':'SERVICE_CATALOG','values':['Web Design','SEO','PPC']}]. Valid headers: AMENITIES, BRANDS, COURSES, DESTINATIONS, MODELS, SERVICE_CATALOG, SERVICES, FEATURES (→SERVICE_CATALOG), STYLES, TYPES.",
+                "description": "Create structured snippet extensions for a campaign using a two-step process (asset creation + campaign association). SERVICES and FEATURES header values are mapped to SERVICE_CATALOG. Values list is padded to at least 3 items if fewer are provided. Each value is silently truncated to 25 characters. SYNTAX: structured_snippets=[{'header':'SERVICE_CATALOG','values':['Web Design','SEO','PPC']}]. Valid headers: AMENITIES, BRANDS, COURSES, DESTINATIONS, MODELS, SERVICE_CATALOG, SERVICES, FEATURES (→SERVICE_CATALOG), STYLES, TYPES.",
                 "handler": self.extension_tools.create_structured_snippet_extensions,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
@@ -565,7 +564,7 @@ class GoogleAdsTools:
                 },
             },
             "create_call_extensions": {
-                "description": "Create a call extension for a campaign using the legacy ExtensionFeedItem API. Call tracking is enabled by default. call_only controls whether the ad shows only the phone number (no website link). country_code defaults to 'US'.",
+                "description": "Create a call extension for a campaign using the legacy ExtensionFeedItem API. Call tracking is enabled by default. country_code defaults to 'US'. Note: call_only is accepted but currently has no effect.",
                 "handler": self.extension_tools.create_call_extensions,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
@@ -585,11 +584,11 @@ class GoogleAdsTools:
                 },
             },
             "delete_extension": {
-                "description": "Delete an extension by its full resource name (e.g., 'customers/123/assets/456') or short numeric ID.",
+                "description": "Delete a campaign-asset link (extension) by its full campaign-asset resource name. The resource name must use the campaignAssets/ format — a plain asset path or numeric ID will fail.",
                 "handler": self.extension_tools.delete_extension,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
-                    "extension_id": {"type": "string", "required": True, "description": "Full resource name (e.g., customers/123/assets/456) or short numeric ID"},
+                    "extension_id": {"type": "string", "required": True, "description": "Full campaign-asset resource name (e.g., customers/{cid}/campaignAssets/{campaign_id}~{asset_id}~{field_type})"},
                 },
             },
         }
@@ -928,7 +927,7 @@ class GoogleAdsTools:
         """Register bidding strategy and bid adjustment tools."""
         return {
             "set_bid_adjustments": {
-                "description": "Apply bid modifiers to a campaign by device, location, or demographic. SYNTAX: adjustments={'device': {'mobile': 1.2, 'desktop': 0.9, 'tablet': 1.1}, 'location': {'2840': 1.3}, 'demographic': {...}}. Supported device keys: mobile, desktop, tablet. Location keys are geo_target_constant IDs (e.g., '2840' for USA). Modifiers are multiplicative: 1.2 = +20%, 0.8 = -20%.",
+                "description": "Apply bid modifiers to a campaign by device or location. SYNTAX: adjustments={'device': {'mobile': 1.2, 'desktop': 0.9, 'tablet': 1.1}, 'location': {'2840': 1.3}}. Supported device keys: mobile, desktop, tablet. Location keys are geo_target_constant IDs (e.g., '2840' for USA). Modifiers are multiplicative: 1.2 = +20%, 0.8 = -20%.",
                 "handler": self.bidding_tools.set_bid_adjustments,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
@@ -946,14 +945,14 @@ class GoogleAdsTools:
                 },
             },
             "create_portfolio_bidding_strategy": {
-                "description": "Create a portfolio bidding strategy shared across campaigns. Supported strategy_type values: TARGET_CPA (requires target_cpa_micros), TARGET_ROAS (requires target_roas), MAXIMIZE_CONVERSIONS, TARGET_IMPRESSION_SHARE (requires strategy_config={'location': 'ANYWHERE_ON_PAGE'|'TOP_OF_PAGE'|'ABSOLUTE_TOP_OF_PAGE', 'impression_share_target': 0.9, 'max_cpc_bid_limit_micros': 5000000}). Returns strategy resource name for use in update_campaign.",
+                "description": "Create a portfolio bidding strategy shared across campaigns. Supported strategy_type values: TARGET_CPA (target_cpa_micros optional, defaults to 10,000,000 = $10), TARGET_ROAS (target_roas optional, defaults to 3.0), MAXIMIZE_CONVERSIONS, TARGET_IMPRESSION_SHARE (requires strategy_config={'location': 'ANYWHERE_ON_PAGE'|'TOP_OF_PAGE'|'ABSOLUTE_TOP_OF_PAGE', 'impression_share_target': 0.9, 'max_cpc_bid_limit_micros': 5000000}). Returns strategy resource name for use in update_campaign.",
                 "handler": self.bidding_tools.create_portfolio_bidding_strategy,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
                     "name": {"type": "string", "required": True},
-                    "strategy_type": {"type": "string", "required": True, "description": "TARGET_CPA (needs target_cpa_micros), TARGET_ROAS (needs target_roas), MAXIMIZE_CONVERSIONS, MAXIMIZE_CLICKS, TARGET_IMPRESSION_SHARE (needs strategy_config)"},
-                    "target_cpa_micros": {"type": "number", "description": "Required when strategy_type=TARGET_CPA. Target cost-per-acquisition in micros ($1 = 1,000,000)"},
-                    "target_roas": {"type": "number", "description": "Required when strategy_type=TARGET_ROAS. Target return on ad spend as a multiplier (e.g., 3.0 = 300% ROAS)"},
+                    "strategy_type": {"type": "string", "required": True, "description": "TARGET_CPA, TARGET_ROAS, MAXIMIZE_CONVERSIONS, MAXIMIZE_CLICKS, TARGET_IMPRESSION_SHARE (needs strategy_config)"},
+                    "target_cpa_micros": {"type": "number", "description": "Optional when strategy_type=TARGET_CPA. Target cost-per-acquisition in micros ($1 = 1,000,000); defaults to 10,000,000 ($10)"},
+                    "target_roas": {"type": "number", "description": "Optional when strategy_type=TARGET_ROAS. Target return on ad spend as a multiplier (e.g., 3.0 = 300% ROAS); defaults to 3.0"},
                     "strategy_config": {"type": "object", "description": "Required when strategy_type=TARGET_IMPRESSION_SHARE: {\"location\": \"TOP_OF_PAGE\" (or ABSOLUTE_TOP_OF_PAGE or ANYWHERE_ON_PAGE), \"impression_share_target\": 0.65, \"max_cpc_bid_limit_micros\": 5000000}"},
                 },
             },
