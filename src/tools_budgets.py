@@ -135,55 +135,85 @@ class BudgetTools:
         customer_id: str,
         budget_id: str,
         amount_micros: Optional[int] = None,
-        name: Optional[str] = None
+        total_amount_micros: Optional[int] = None,
+        name: Optional[str] = None,
+        delivery_method: Optional[str] = None,
+        explicitly_shared: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """Update budget amount or settings."""
+        # Validation
+        if all(v is None for v in [amount_micros, total_amount_micros, name, delivery_method, explicitly_shared]):
+            return {"success": False, "error": "At least one field must be provided to update.", "error_type": "ValidationError"}
+
+        if amount_micros is not None and total_amount_micros is not None:
+            return {"success": False, "error": "amount_micros and total_amount_micros are mutually exclusive; provide only one.", "error_type": "ValidationError"}
+
+        if explicitly_shared is False:
+            return {"success": False, "error": "A shared budget can never be made non-shared. explicitly_shared cannot be set to False.", "error_type": "ValidationError"}
+
         try:
             client = self.auth_manager.get_client(customer_id)
             budget_service = client.get_service("CampaignBudgetService")
-            
+
             # Create budget operation
             budget_operation = client.get_type("CampaignBudgetOperation")
             budget = budget_operation.update
-            
+
             # Set resource name
             budget.resource_name = budget_service.campaign_budget_path(
                 customer_id, budget_id
             )
-            
+
             # Set update mask fields (API v21 compatible)
             from google.protobuf.field_mask_pb2 import FieldMask
             update_mask = FieldMask()
             paths = []
-            
+
             if amount_micros is not None:
                 budget.amount_micros = amount_micros
                 paths.append("amount_micros")
-                
+
             if name is not None:
                 budget.name = name
                 paths.append("name")
-                
+
+            if total_amount_micros is not None:
+                budget.total_amount_micros = total_amount_micros
+                paths.append("total_amount_micros")
+
+            if delivery_method is not None:
+                if delivery_method.upper() == "ACCELERATED":
+                    budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.ACCELERATED
+                else:
+                    budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
+                paths.append("delivery_method")
+
+            if explicitly_shared is True:
+                budget.explicitly_shared = True
+                paths.append("explicitly_shared")
+
             update_mask.paths.extend(paths)
             budget_operation.update_mask = update_mask
-            
+
             # Update the budget
             response = budget_service.mutate_campaign_budgets(
                 customer_id=customer_id,
                 operations=[budget_operation],
             )
-            
+
             logger.info(
                 f"Updated campaign budget",
                 customer_id=customer_id,
                 budget_id=budget_id,
                 updated_fields=paths
             )
-            
+
             return {
                 "success": True,
                 "budget_id": budget_id,
                 "updated_fields": paths,
+                "delivery_method": delivery_method,
+                "explicitly_shared": explicitly_shared,
                 "message": f"Successfully updated budget {budget_id}"
             }
             

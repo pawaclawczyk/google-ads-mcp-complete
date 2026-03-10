@@ -470,13 +470,21 @@ class GoogleAdsTools:
                 },
             },
             "update_budget": {
-                "description": "Update a campaign budget's amount (amount_micros) and/or name using field-mask based update. At least one of amount_micros or name must be provided.",
+                "description": (
+                    "Update a campaign budget's amount and/or settings using field-mask based update. "
+                    "At least one field must be provided. amount_micros (DAILY) and total_amount_micros "
+                    "(CUSTOM_PERIOD) are mutually exclusive. explicitly_shared can only be set to True "
+                    "(a shared budget can never become non-shared)."
+                ),
                 "handler": self.budget_tools.update_budget,
                 "parameters": {
                     "customer_id": {"type": "string", "required": True},
                     "budget_id": {"type": "string", "required": True},
-                    "amount_micros": {"type": "number", "description": "New daily budget in micros ($1 = 1,000,000); at least one of amount_micros or name is required"},
-                    "name": {"type": "string", "description": "New budget name; at least one of name or amount_micros is required"},
+                    "amount_micros": {"type": "number", "description": "New daily budget in micros ($1 = 1,000,000). For DAILY budgets only; mutually exclusive with total_amount_micros."},
+                    "total_amount_micros": {"type": "number", "description": "New lifetime budget in micros. For CUSTOM_PERIOD budgets only; mutually exclusive with amount_micros."},
+                    "name": {"type": "string", "description": "New budget name."},
+                    "delivery_method": {"type": "string", "description": "STANDARD (pace evenly) or ACCELERATED (spend as fast as possible)."},
+                    "explicitly_shared": {"type": "boolean", "description": "Set to True to make the budget explicitly shared across campaigns. Cannot be set to False (shared budgets can never become non-shared)."},
                 },
             },
             "list_budgets": {
