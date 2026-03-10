@@ -9,6 +9,11 @@ from google.ads.googleads.errors import GoogleAdsException
 logger = structlog.get_logger(__name__)
 
 
+def _enum_name(val):
+    """Return the string name of a proto enum value, handling both enum objects and plain ints."""
+    return val.name if hasattr(val, 'name') else str(val)
+
+
 class AdTools:
     """Ad management tools."""
     
@@ -258,8 +263,8 @@ class AdTools:
             for row in response:
                 ad_data = {
                     "id": str(row.ad_group_ad.ad.id),
-                    "type": str(row.ad_group_ad.ad.type_.name),
-                    "status": str(row.ad_group_ad.status.name),
+                    "type": str(_enum_name(row.ad_group_ad.ad.type_)),
+                    "status": str(_enum_name(row.ad_group_ad.status)),
                     "final_urls": list(row.ad_group_ad.ad.final_urls),
                     "ad_group_id": str(row.ad_group.id),
                     "ad_group_name": str(row.ad_group.name),
@@ -268,11 +273,11 @@ class AdTools:
                 }
                 
                 # Add type-specific details
-                if row.ad_group_ad.ad.type_.name == "RESPONSIVE_SEARCH_AD":
+                if _enum_name(row.ad_group_ad.ad.type_) == "RESPONSIVE_SEARCH_AD":
                     rsa = row.ad_group_ad.ad.responsive_search_ad
                     ad_data["headlines"] = [h.text for h in rsa.headlines]
                     ad_data["descriptions"] = [d.text for d in rsa.descriptions]
-                elif row.ad_group_ad.ad.type_.name == "EXPANDED_TEXT_AD":
+                elif _enum_name(row.ad_group_ad.ad.type_) == "EXPANDED_TEXT_AD":
                     eta = row.ad_group_ad.ad.expanded_text_ad
                     ad_data["headline1"] = eta.headline_part1
                     ad_data["headline2"] = eta.headline_part2
@@ -447,8 +452,19 @@ class AdTools:
             }
             
         except GoogleAdsException as e:
+            for err in e.failure.errors:
+                if "OPERATION_NOT_PERMITTED_FOR_REMOVED_RESOURCE" in str(err.error_code):
+                    return {
+                        "success": True,
+                        "already_removed": True,
+                        "message": "Resource was already deleted",
+                    }
             logger.error(f"Failed to delete ad: {e}")
-            raise
+            return {
+                "success": False,
+                "error": str(e),
+                "error_type": "GoogleAdsException",
+            }
     
     async def get_ad_strength_and_review_status(
         self,
@@ -508,17 +524,17 @@ class AdTools:
                 ad_data = {
                     "ad_id": str(row.ad_group_ad.ad.id),
                     "ad_name": str(row.ad_group_ad.ad.name) if row.ad_group_ad.ad.name else f"Ad {row.ad_group_ad.ad.id}",
-                    "ad_type": str(row.ad_group_ad.ad.type_.name),
-                    "status": str(row.ad_group_ad.status.name),
+                    "ad_type": str(_enum_name(row.ad_group_ad.ad.type_)),
+                    "status": str(_enum_name(row.ad_group_ad.status)),
                     "ad_group_name": str(row.ad_group.name),
                     "campaign_name": str(row.campaign.name),
-                    
+
                     # Ad Strength & Quality
-                    "ad_strength": str(row.ad_group_ad.strength.name) if hasattr(row.ad_group_ad, 'strength') and row.ad_group_ad.strength else "NOT_AVAILABLE",
-                    
+                    "ad_strength": str(_enum_name(row.ad_group_ad.strength)) if hasattr(row.ad_group_ad, 'strength') and row.ad_group_ad.strength else "NOT_AVAILABLE",
+
                     # Review & Policy Status
-                    "review_status": str(row.ad_group_ad.policy_summary.review_status.name) if hasattr(row.ad_group_ad, 'policy_summary') else "UNKNOWN",
-                    "approval_status": str(row.ad_group_ad.policy_summary.approval_status.name) if hasattr(row.ad_group_ad, 'policy_summary') else "UNKNOWN",
+                    "review_status": str(_enum_name(row.ad_group_ad.policy_summary.review_status)) if hasattr(row.ad_group_ad, 'policy_summary') else "UNKNOWN",
+                    "approval_status": str(_enum_name(row.ad_group_ad.policy_summary.approval_status)) if hasattr(row.ad_group_ad, 'policy_summary') else "UNKNOWN",
                     
                     # Performance
                     "performance": {
@@ -529,7 +545,7 @@ class AdTools:
                 }
                 
                 # Add ad content details
-                if row.ad_group_ad.ad.type_.name == "RESPONSIVE_SEARCH_AD":
+                if _enum_name(row.ad_group_ad.ad.type_) == "RESPONSIVE_SEARCH_AD":
                     headlines = [str(h.text) for h in row.ad_group_ad.ad.responsive_search_ad.headlines]
                     descriptions = [str(d.text) for d in row.ad_group_ad.ad.responsive_search_ad.descriptions]
                     
@@ -674,9 +690,9 @@ class AdTools:
                 ad_data = {
                     "ad_id": str(row.ad_group_ad.ad.id),
                     "ad_name": str(row.ad_group_ad.ad.name) if row.ad_group_ad.ad.name else f"Ad {row.ad_group_ad.ad.id}",
-                    "ad_strength": str(row.ad_group_ad.strength.name) if hasattr(row.ad_group_ad, 'strength') and row.ad_group_ad.strength else "NOT_AVAILABLE",
-                    "status": str(row.ad_group_ad.status.name),
-                    
+                    "ad_strength": str(_enum_name(row.ad_group_ad.strength)) if hasattr(row.ad_group_ad, 'strength') and row.ad_group_ad.strength else "NOT_AVAILABLE",
+                    "status": str(_enum_name(row.ad_group_ad.status)),
+
                     # Core Performance Metrics
                     "performance": {
                         "clicks": clicks,
@@ -784,9 +800,9 @@ class AdTools:
                     "rank": 0,  # Will be set after sorting
                     "ad_id": str(row.ad_group_ad.ad.id),
                     "ad_name": str(row.ad_group_ad.ad.name) if row.ad_group_ad.ad.name else f"Ad {row.ad_group_ad.ad.id}",
-                    "ad_strength": str(row.ad_group_ad.strength.name) if hasattr(row.ad_group_ad, 'strength') and row.ad_group_ad.strength else "NOT_AVAILABLE",
-                    "status": str(row.ad_group_ad.status.name),
-                    
+                    "ad_strength": str(_enum_name(row.ad_group_ad.strength)) if hasattr(row.ad_group_ad, 'strength') and row.ad_group_ad.strength else "NOT_AVAILABLE",
+                    "status": str(_enum_name(row.ad_group_ad.status)),
+
                     # Performance metrics
                     "performance": {
                         "clicks": clicks,
@@ -934,7 +950,7 @@ class AdTools:
                     "ad_name": str(row.ad_group_ad.ad.name) if row.ad_group_ad.ad.name else f"Ad {row.ad_group_ad.ad.id}",
                     "ad_group_name": str(row.ad_group.name),
                     "campaign_name": str(row.campaign.name),
-                    "strength": str(row.ad_group_ad.strength.name) if hasattr(row.ad_group_ad, 'strength') and row.ad_group_ad.strength else "NOT_AVAILABLE",
+                    "strength": str(_enum_name(row.ad_group_ad.strength)) if hasattr(row.ad_group_ad, 'strength') and row.ad_group_ad.strength else "NOT_AVAILABLE",
                     "clicks": clicks,
                     "cost": cost,
                     "conversions": conversions,
@@ -1230,7 +1246,7 @@ class AdTools:
                 ad_id = str(row.ad_group_ad.ad.id)
                 current_data[ad_id] = {
                     "ad_name": str(row.ad_group_ad.ad.name) if row.ad_group_ad.ad.name else f"Ad {ad_id}",
-                    "strength": str(row.ad_group_ad.strength.name) if hasattr(row.ad_group_ad, 'strength') and row.ad_group_ad.strength else "NOT_AVAILABLE",
+                    "strength": str(_enum_name(row.ad_group_ad.strength)) if hasattr(row.ad_group_ad, 'strength') and row.ad_group_ad.strength else "NOT_AVAILABLE",
                     "clicks": int(row.metrics.clicks) if hasattr(row, 'metrics') else 0,
                     "ctr": float(row.metrics.ctr) if hasattr(row, 'metrics') and row.metrics.ctr else 0,
                     "conversions": float(row.metrics.conversions) if hasattr(row, 'metrics') else 0,
