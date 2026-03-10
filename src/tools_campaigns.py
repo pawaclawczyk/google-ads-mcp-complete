@@ -12,6 +12,8 @@ from .utils import currency_to_micros, micros_to_currency, parse_date
 
 logger = structlog.get_logger(__name__)
 
+_CAMPAIGN_STATUS = {0: "UNSPECIFIED", 1: "UNKNOWN", 2: "ENABLED", 3: "PAUSED", 4: "REMOVED"}
+
 
 class CampaignTools:
     """Campaign management tools."""
@@ -326,14 +328,14 @@ class CampaignTools:
                 FROM campaign
             """
             
-            conditions = []
             if status:
-                conditions.append(f"campaign.status = '{status.upper()}'")
+                conditions = [f"campaign.status = '{status.upper()}'"]
+            else:
+                conditions = ["campaign.status != 'REMOVED'"]
             if campaign_type:
                 conditions.append(f"campaign.advertising_channel_type = '{campaign_type.upper()}'")
-                
-            if conditions:
-                query += " WHERE " + " AND ".join(conditions)
+
+            query += " WHERE " + " AND ".join(conditions)
                 
             query += " ORDER BY campaign.name"
             
@@ -349,7 +351,7 @@ class CampaignTools:
                 campaigns.append({
                     "id": str(row.campaign.id),
                     "name": str(row.campaign.name),
-                    "status": status.name if hasattr(status, "name") else str(status),
+                    "status": status.name if hasattr(status, "name") else _CAMPAIGN_STATUS.get(int(status), str(status)),
                     "type": channel_type.name if hasattr(channel_type, "name") else str(channel_type),
                 })
                 
@@ -481,6 +483,13 @@ class CampaignTools:
             }
             
         except GoogleAdsException as e:
+            for err in e.failure.errors:
+                if "OPERATION_NOT_PERMITTED_FOR_REMOVED_RESOURCE" in str(err.error_code):
+                    return {
+                        "success": True,
+                        "already_removed": True,
+                        "message": "Resource was already deleted",
+                    }
             logger.error(f"Failed to delete campaign: {e}")
             return self.error_handler.format_error_response(e)
         
