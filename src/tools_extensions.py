@@ -406,69 +406,81 @@ class ExtensionTools:
             client = self.auth_manager.get_client(customer_id)
             googleads_service = client.get_service("GoogleAdsService")
             
+            # extension_feed_item was removed in API v17; use campaign_asset + asset instead
             query = """
                 SELECT
-                    extension_feed_item.resource_name,
-                    extension_feed_item.id,
-                    extension_feed_item.extension_type,
-                    extension_feed_item.status,
-                    extension_feed_item.sitelink_feed_item.link_text,
-                    extension_feed_item.sitelink_feed_item.line1,
-                    extension_feed_item.sitelink_feed_item.line2,
-                    extension_feed_item.callout_feed_item.callout_text,
-                    extension_feed_item.call_feed_item.phone_number,
-                    extension_feed_item.call_feed_item.country_code,
-                    extension_feed_item.final_urls,
-                    campaign.name,
-                    campaign.id
-                FROM extension_feed_item
+                    asset.id,
+                    asset.resource_name,
+                    asset.type,
+                    asset.name,
+                    asset.sitelink_asset.link_text,
+                    asset.sitelink_asset.description1,
+                    asset.sitelink_asset.description2,
+                    asset.callout_asset.callout_text,
+                    asset.call_asset.phone_number,
+                    asset.call_asset.country_code,
+                    campaign_asset.campaign,
+                    campaign_asset.field_type,
+                    campaign_asset.status
+                FROM campaign_asset
+                WHERE asset.type IN (SITELINK, CALLOUT, CALL)
             """
-            
+
             conditions = []
             if campaign_id:
-                conditions.append(f"campaign.id = {campaign_id}")
+                conditions.append(f"campaign_asset.campaign = 'customers/{customer_id}/campaigns/{campaign_id}'")
             if extension_type:
-                conditions.append(f"extension_feed_item.extension_type = '{extension_type.upper()}'")
-            
+                type_upper = extension_type.upper()
+                conditions.append(f"asset.type = {type_upper}")
+
             if conditions:
-                query += " WHERE " + " AND ".join(conditions)
-            
-            query += " ORDER BY extension_feed_item.extension_type, extension_feed_item.id"
-            
+                query += " AND " + " AND ".join(conditions)
+
             response = googleads_service.search(
                 customer_id=customer_id,
                 query=query
             )
-            
+
             extensions = []
             for row in response:
+                asset = row.asset
+                campaign_asset = row.campaign_asset
+
+                asset_type_val = asset.type_
+                asset_type = asset_type_val.name if hasattr(asset_type_val, 'name') else str(asset_type_val)
+
+                status_val = campaign_asset.status
+                status = status_val.name if hasattr(status_val, 'name') else str(status_val)
+
+                # Extract campaign ID from resource name like customers/123/campaigns/456
+                campaign_resource = campaign_asset.campaign
+                campaign_id_extracted = campaign_resource.split("/")[-1] if campaign_resource else ""
+
                 extension_data = {
-                    "id": str(row.extension_feed_item.id),
-                    "type": str(row.extension_feed_item.extension_type.name),
-                    "status": str(row.extension_feed_item.status.name),
-                    "campaign_name": str(row.campaign.name),
-                    "campaign_id": str(row.campaign.id),
-                    "resource_name": row.extension_feed_item.resource_name,
+                    "id": str(asset.id),
+                    "type": asset_type,
+                    "status": status,
+                    "campaign_id": campaign_id_extracted,
+                    "resource_name": asset.resource_name,
                 }
-                
+
                 # Add type-specific data
-                if row.extension_feed_item.extension_type.name == "SITELINK":
+                if asset_type == "SITELINK":
                     extension_data["sitelink"] = {
-                        "link_text": str(row.extension_feed_item.sitelink_feed_item.link_text),
-                        "description1": str(row.extension_feed_item.sitelink_feed_item.line1),
-                        "description2": str(row.extension_feed_item.sitelink_feed_item.line2),
-                        "url": row.extension_feed_item.final_urls[0] if row.extension_feed_item.final_urls else "",
+                        "link_text": str(asset.sitelink_asset.link_text),
+                        "description1": str(asset.sitelink_asset.description1),
+                        "description2": str(asset.sitelink_asset.description2),
                     }
-                elif row.extension_feed_item.extension_type.name == "CALLOUT":
+                elif asset_type == "CALLOUT":
                     extension_data["callout"] = {
-                        "text": str(row.extension_feed_item.callout_feed_item.callout_text),
+                        "text": str(asset.callout_asset.callout_text),
                     }
-                elif row.extension_feed_item.extension_type.name == "CALL":
+                elif asset_type == "CALL":
                     extension_data["call"] = {
-                        "phone_number": str(row.extension_feed_item.call_feed_item.phone_number),
-                        "country_code": str(row.extension_feed_item.call_feed_item.country_code),
+                        "phone_number": str(asset.call_asset.phone_number),
+                        "country_code": str(asset.call_asset.country_code),
                     }
-                
+
                 extensions.append(extension_data)
             
             return {
@@ -483,46 +495,41 @@ class ExtensionTools:
             logger.error(f"Failed to list extensions: {e}")
             raise
     
-    async def delete_extension(
-        self,
-        customer_id: str,
-        extension_id: str
-    ) -> Dict[str, Any]:
-        """Delete a specific extension.
-        
+    async def delete_extension(self, customer_id: str, extension_id: str) -> Dict[str, Any]:
+        """Remove a campaign-level asset link (extension).
+
         Args:
-            customer_id: The customer ID
-            extension_id: The extension feed item resource name or ID
+            customer_id: The customer ID.
+            extension_id: The campaign_asset resource name returned by list_extensions,
+                          e.g. customers/{cid}/campaignAssets/{campaign_id}~{asset_id}~{field_type}
         """
         try:
             client = self.auth_manager.get_client(customer_id)
-            extension_feed_item_service = client.get_service("ExtensionFeedItemService")
-            
-            # Create remove operation
-            extension_feed_item_operation = client.get_type("ExtensionFeedItemOperation")
-            
-            # Handle both resource name and ID formats
-            if extension_id.startswith("customers/"):
-                extension_feed_item_operation.remove = extension_id
-            else:
-                extension_feed_item_operation.remove = client.get_service("ExtensionFeedItemService").extension_feed_item_path(
-                    customer_id, extension_id
-                )
-            
-            # Execute removal
-            response = extension_feed_item_service.mutate_extension_feed_items(
+            campaign_asset_service = client.get_service("CampaignAssetService")
+
+            operation = client.get_type("CampaignAssetOperation")
+            operation.remove = extension_id
+
+            response = campaign_asset_service.mutate_campaign_assets(
                 customer_id=customer_id,
-                operations=[extension_feed_item_operation]
+                operations=[operation],
             )
-            
+
             return {
                 "success": True,
                 "extension_id": extension_id,
-                "message": "Extension deleted successfully",
+                "message": "Extension link removed successfully",
                 "resource_name": response.results[0].resource_name,
             }
-            
+
         except GoogleAdsException as e:
+            for err in e.failure.errors:
+                if "OPERATION_NOT_PERMITTED_FOR_REMOVED_RESOURCE" in str(err.error_code):
+                    return {
+                        "success": True,
+                        "already_removed": True,
+                        "message": "Extension link was already removed",
+                    }
             logger.error(f"Failed to delete extension: {e}")
             raise
 
