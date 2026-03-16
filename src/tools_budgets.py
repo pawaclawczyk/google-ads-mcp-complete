@@ -239,33 +239,31 @@ class BudgetTools:
             googleads_service: GoogleAdsServiceClient = client.get_service("GoogleAdsService")
 
             query = """
-                SELECT
-                    campaign_budget.id,
-                    campaign_budget.name,
-                    campaign_budget.amount_micros,
-                    campaign_budget.total_amount_micros,
-                    campaign_budget.period,
-                    campaign_budget.delivery_method,
-                    campaign_budget.status,
-                    campaign_budget.explicitly_shared,
-                    campaign_budget.reference_count,
-                    campaign_budget.has_recommended_budget,
-                    campaign_budget.recommended_budget_amount_micros,
-                    campaign_budget.type
-                FROM campaign_budget
-            """
+                    SELECT campaign_budget.id,
+                           campaign_budget.name,
+                           campaign_budget.amount_micros,
+                           campaign_budget.total_amount_micros,
+                           campaign_budget.period,
+                           campaign_budget.delivery_method,
+                           campaign_budget.status,
+                           campaign_budget.explicitly_shared,
+                           campaign_budget.reference_count,
+                           campaign_budget.has_recommended_budget,
+                           campaign_budget.recommended_budget_amount_micros,
+                           campaign_budget.type
+                    FROM campaign_budget
+                    """
 
             response = googleads_service.search(customer_id=customer_id, query=query)
 
             budgets: List[Dict[str, Any]] = []
             for row in response:
                 budget = row.campaign_budget
-                period = str(budget.period.name)
                 entry = {
                     "id": str(budget.id),
                     "name": str(budget.name),
                     "status": str(budget.status.name),
-                    "period": period,
+                    "period": str(budget.period.name),
                     "delivery_method": str(budget.delivery_method.name),
                     "explicitly_shared": budget.explicitly_shared,
                     "reference_count": budget.reference_count,

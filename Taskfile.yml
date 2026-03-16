@@ -27,9 +27,20 @@ tasks:
     cmds:
       - uv run mypy src/tools_budgets.py
 
+  test:
+    desc: Run unit tests
+    cmds:
+      - uv run --extra dev pytest tests/unit -v
+
+  test-integration:
+    desc: Run integration tests (requires valid credentials)
+    cmds:
+      - uv run --extra dev pytest tests/integration -v -m integration
+
   check:
     desc: Run all checks
     cmds:
       - task: format
       - task: lint-fix
       - task: type-check
+      - task: test

@@ -162,14 +162,19 @@ class GoogleAdsAuthManager:
                 
             if linked_customer_id := self.config.get("linked_customer_id"):
                 client_config["linked_customer_id"] = linked_customer_id.replace("-", "")
-                
+
+            if str(client_config["use_proto_plus"]).lower().strip() in ("false", "f", "no", "n", "0"):
+                use_proto_plus = False
+            else:
+                use_proto_plus = True
+
             # Create client
             client = GoogleAdsClient(
                 credentials=credentials,
                 developer_token=client_config["developer_token"],
                 login_customer_id=client_config.get("login_customer_id"),
                 linked_customer_id=client_config.get("linked_customer_id"),
-                use_proto_plus=client_config["use_proto_plus"],
+                use_proto_plus=use_proto_plus,
             )
             
             # Cache the client
